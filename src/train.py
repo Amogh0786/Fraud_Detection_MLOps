@@ -2,10 +2,12 @@ import mlflow
 import mlflow.xgboost
 import xgboost as xgb
 from sklearn.metrics import average_precision_score
+import os
 
 def train_model(X_train, y_train, X_test, y_test):
     # Set tracking server URI (could be a remote server like AWS EC2)
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
+    mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment("Fraud_Detection_Experiment")
     
     with mlflow.start_run():

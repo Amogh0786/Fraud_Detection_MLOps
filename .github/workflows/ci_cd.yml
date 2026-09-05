@@ -33,5 +33,10 @@ jobs:
           push: true
           tags: yourusername/fraud-api:latest
           
-      # Add a final step here to SSH into your production server 
-      # and run `docker pull` and `docker run` to update the service.
+      - name: Deploy to Kubernetes
+        run: |
+          # Requires KUBECONFIG to be set as a GitHub Secret
+          # echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+          # export KUBECONFIG=kubeconfig.yaml
+          # kubectl apply -f k8s/
+          echo "Placeholder: kubectl apply -f k8s/"
