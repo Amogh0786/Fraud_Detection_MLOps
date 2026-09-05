@@ -4,21 +4,33 @@ import mlflow.xgboost
 import pandas as pd
 import xgboost as xgb
 from feast import FeatureStore
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Fraud Detection API")
 
 model = None
+shadow_model = None
 fs = None
 
 @app.on_event("startup")
 def load_resources():
-    global model, fs
+    global model, shadow_model, fs
     try:
-        model_uri = "models:/FraudDetectionModel/latest"
+        model_uri = "models:/FraudDetectionModel/Production"
         model = mlflow.xgboost.load_model(model_uri)
-        print("Model loaded successfully.")
+        print("Primary model loaded successfully.")
     except Exception as e:
-        print(f"Warning: Could not load model on startup: {e}")
+        print(f"Warning: Could not load primary model on startup: {e}")
+        
+    try:
+        shadow_model_uri = "models:/FraudDetectionModel/Staging"
+        shadow_model = mlflow.xgboost.load_model(shadow_model_uri)
+        print("Shadow model loaded successfully.")
+    except Exception as e:
+        print(f"Warning: Could not load shadow model on startup: {e}")
     
     try:
         # Initialize Feast Feature Store
@@ -61,5 +73,13 @@ def predict_fraud(transaction: Transaction):
     
     prediction = model.predict(dmatrix_data)
     is_fraud = bool(prediction[0] > 0.8)
+    
+    # Run shadow model if available
+    if shadow_model is not None:
+        try:
+            shadow_pred = shadow_model.predict(dmatrix_data)
+            logger.info(f"Shadow Model Prediction: {float(shadow_pred[0])}, Primary: {float(prediction[0])}")
+        except Exception as e:
+            logger.error(f"Shadow model failed: {e}")
     
     return {"fraud_probability": float(prediction[0]), "is_fraud": is_fraud}
